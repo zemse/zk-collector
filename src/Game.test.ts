@@ -1,5 +1,16 @@
-import { Add } from './Add';
-import { Field, Mina, PrivateKey, PublicKey, AccountUpdate } from 'o1js';
+import { Game, GameState } from './Game';
+import {
+  Field,
+  Mina,
+  PrivateKey,
+  PublicKey,
+  AccountUpdate,
+  SmartContract,
+  state,
+  State,
+  method,
+  ZkProgram,
+} from 'o1js';
 
 /*
  * This file specifies how to test the `Add` example smart contract. It is safe to delete this file and replace
@@ -10,17 +21,32 @@ import { Field, Mina, PrivateKey, PublicKey, AccountUpdate } from 'o1js';
 
 let proofsEnabled = false;
 
-describe.skip('Add', () => {
+export let GameProof_ = ZkProgram.Proof(Game);
+export class GameProof extends GameProof_ {}
+
+class GameTest extends SmartContract {
+  @state(Field) score = State<Field>();
+
+  @method update(proof: GameProof) {
+    proof.verify();
+    // TODO check if the game prev states are initial
+
+    this.score.set(proof.publicInput.score.next);
+  }
+}
+
+describe('Game', () => {
   let deployerAccount: PublicKey,
     deployerKey: PrivateKey,
     senderAccount: PublicKey,
     senderKey: PrivateKey,
     zkAppAddress: PublicKey,
     zkAppPrivateKey: PrivateKey,
-    zkApp: Add;
+    zkApp: GameTest;
 
   beforeAll(async () => {
-    if (proofsEnabled) await Add.compile();
+    await Game.compile();
+    if (proofsEnabled) await GameTest.compile();
   });
 
   beforeEach(() => {
@@ -32,7 +58,7 @@ describe.skip('Add', () => {
       Local.testAccounts[1]);
     zkAppPrivateKey = PrivateKey.random();
     zkAppAddress = zkAppPrivateKey.toPublicKey();
-    zkApp = new Add(zkAppAddress);
+    zkApp = new GameTest(zkAppAddress);
   });
 
   async function localDeploy() {
@@ -45,23 +71,29 @@ describe.skip('Add', () => {
     await txn.sign([deployerKey, zkAppPrivateKey]).send();
   }
 
-  it('generates and deploys the `Add` smart contract', async () => {
-    await localDeploy();
-    const num = zkApp.num.get();
-    expect(num).toEqual(Field(1));
-  });
+  //   it('generates and deploys the `Add` smart contract', async () => {
+  //     await localDeploy();
+  //     const num = zkApp.num.get();
+  //     expect(num).toEqual(Field(1));
+  //   });
 
-  it('correctly updates the num state on the `Add` smart contract', async () => {
+  it('play', async () => {
     await localDeploy();
 
     // update transaction
+    let proof = await Game.play(
+      GameState.initial().operate(Field(3)),
+      Field(3)
+    );
+    // console.log(JSON.stringify(proof));
     const txn = await Mina.transaction(senderAccount, () => {
-      zkApp.update();
+      zkApp.update(proof);
     });
     await txn.prove();
     await txn.sign([senderKey]).send();
 
-    const updatedNum = zkApp.num.get();
-    expect(updatedNum).toEqual(Field(3));
+    const updatedNum = zkApp.score.get();
+    // console.log(updatedNum.toBigInt());
+    expect(updatedNum).toEqual(Field(1));
   });
 });
