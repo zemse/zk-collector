@@ -1,4 +1,4 @@
-import { Game, GameState } from './Game';
+import { Game, GameState, STEP } from './Game';
 import {
   Field,
   Mina,
@@ -12,13 +12,6 @@ import {
   ZkProgram,
 } from 'o1js';
 
-/*
- * This file specifies how to test the `Add` example smart contract. It is safe to delete this file and replace
- * with your own tests.
- *
- * See https://docs.minaprotocol.com/zkapps for more info.
- */
-
 let proofsEnabled = false;
 
 export let GameProof_ = ZkProgram.Proof(Game);
@@ -28,9 +21,14 @@ class GameTest extends SmartContract {
   @state(Field) score = State<Field>();
 
   @method update(proof: GameProof) {
+    // ensure valid zk proof of solution
     proof.verify();
-    // TODO check if the game prev states are initial
 
+    // ensure start states are initial
+    proof.publicInput.score.prev.assertEquals(0);
+    proof.publicInput.location.prev.assertEquals(0);
+
+    // make the score public
     this.score.set(proof.publicInput.score.next);
   }
 }
@@ -71,20 +69,22 @@ describe('Game', () => {
     await txn.sign([deployerKey, zkAppPrivateKey]).send();
   }
 
-  //   it('generates and deploys the `Add` smart contract', async () => {
-  //     await localDeploy();
-  //     const num = zkApp.num.get();
-  //     expect(num).toEqual(Field(1));
-  //   });
+  async function proveGame(runcode: bigint[]) {
+    if (runcode.length === 1) {
+      return Game.play(
+        GameState.initial().operate(Field(runcode[0])),
+        Field(runcode[0])
+      );
+    } else {
+      throw new Error('recursion not yet implemented');
+    }
+  }
 
-  it('play', async () => {
+  it('play single step: up', async () => {
     await localDeploy();
 
     // update transaction
-    let proof = await Game.play(
-      GameState.initial().operate(Field(3)),
-      Field(3)
-    );
+    let proof = await proveGame([STEP.UP]);
     // console.log(JSON.stringify(proof));
     const txn = await Mina.transaction(senderAccount, () => {
       zkApp.update(proof);
@@ -93,7 +93,6 @@ describe('Game', () => {
     await txn.sign([senderKey]).send();
 
     const updatedNum = zkApp.score.get();
-    // console.log(updatedNum.toBigInt());
     expect(updatedNum).toEqual(Field(1));
   });
 });

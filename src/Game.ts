@@ -1,5 +1,12 @@
 import { Field, Struct, ZkProgram } from 'o1js';
 
+export const STEP = {
+  UP: 1n,
+  LEFT: 2n,
+  RIGHT: 3n,
+  DOWN: 4n,
+};
+
 class FieldPrevNext extends Struct({
   prev: Field,
   next: Field,
@@ -35,25 +42,25 @@ export class GameState extends Struct({
 
   operate(opcode: Field) {
     switch (opcode.toBigInt()) {
-      case 1n:
+      case STEP.UP:
         return new GameState({
           score: this.score.update((s) => s.add(1)),
           location: this.location.update((l) => l.sub(N)),
           moves: this.moves.add(1),
         });
-      case 2n:
+      case STEP.LEFT:
         return new GameState({
           score: this.score.update((s) => s.add(1)),
           location: this.location.update((l) => l.sub(1)),
           moves: this.moves.add(1),
         });
-      case 3n:
+      case STEP.RIGHT:
         return new GameState({
           score: this.score.update((s) => s.add(1)),
           location: this.location.update((l) => l.add(1)),
           moves: this.moves.add(1),
         });
-      case 4n:
+      case STEP.DOWN:
         return new GameState({
           score: this.score.update((s) => s.add(1)),
           location: this.location.update((l) => l.add(N)),
@@ -76,36 +83,35 @@ export const Game = ZkProgram({
     play: {
       privateInputs: [Field], // opcode
 
-      // opcode: 1 -> up, 2 -> left, 3 -> right, 4 -> down
       method(publicInput: GameState, opcode: Field) {
-        // opcode
-        //   .equals(Field(1))
-        //   .not()
-        //   .or(
-        //     publicInput.location.next.equals(publicInput.location.prev.sub(N))
-        //   ) // TODO prevent overflow
-        //   .assertTrue();
-        // opcode
-        //   .equals(Field(2))
-        //   .not()
-        //   .or(
-        //     publicInput.location.next.equals(publicInput.location.prev.sub(1))
-        //   ) // TODO prevent overflow
-        //   .assertTrue();
-        // opcode
-        //   .equals(Field(3))
-        //   .not()
-        //   .or(
-        //     publicInput.location.next.equals(publicInput.location.prev.add(1))
-        //   ) // TODO prevent overflow
-        //   .assertTrue();
-        // opcode
-        //   .equals(Field(4))
-        //   .not()
-        //   .or(
-        //     publicInput.location.next.equals(publicInput.location.prev.add(N))
-        //   ) // TODO prevent overflow
-        //   .assertTrue();
+        opcode
+          .equals(Field(STEP.UP))
+          .not()
+          .or(
+            publicInput.location.next.equals(publicInput.location.prev.sub(N))
+          ) // TODO prevent overflow
+          .assertTrue();
+        opcode
+          .equals(Field(STEP.LEFT))
+          .not()
+          .or(
+            publicInput.location.next.equals(publicInput.location.prev.sub(1))
+          ) // TODO prevent overflow
+          .assertTrue();
+        opcode
+          .equals(Field(STEP.RIGHT))
+          .not()
+          .or(
+            publicInput.location.next.equals(publicInput.location.prev.add(1))
+          ) // TODO prevent overflow
+          .assertTrue();
+        opcode
+          .equals(Field(STEP.DOWN))
+          .not()
+          .or(
+            publicInput.location.next.equals(publicInput.location.prev.add(N))
+          ) // TODO prevent overflow
+          .assertTrue();
       },
     },
   },
