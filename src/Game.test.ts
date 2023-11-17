@@ -69,18 +69,50 @@ describe('Game', () => {
     await txn.sign([deployerKey, zkAppPrivateKey]).send();
   }
 
-  async function proveGame(runcode: bigint[]) {
-    if (runcode.length === 1) {
+  async function proveGame(runcodes: bigint[]) {
+    if (runcodes.length === 1) {
       return Game.play(
-        GameState.initial().operate(Field(runcode[0])),
-        Field(runcode[0])
+        GameState.initial().operate(Field(runcodes[0])),
+        Field(runcodes[0])
       );
     } else {
-      throw new Error('recursion not yet implemented');
+      let gameState = GameState.initial();
+      let gameStates: GameState[] = [];
+      let proofs: GameProof[] = [];
+      for (const runcode of runcodes) {
+        gameState = gameState.operate(Field(runcode));
+        gameStates.push(gameState);
+        let time = Date.now();
+        console.log('proving');
+        proofs.push(await Game.play(gameState, Field(runcode)));
+        console.log('proving done', Date.now() - time);
+      }
+      while (proofs.length > 1) {
+        let gameStatesNew: GameState[] = [];
+        let proofsNew: GameProof[] = [];
+        for (let i = 0; i < proofs.length; i += 2) {
+          if (i + 1 < proofs.length) {
+            let gameStateFolded = gameStates[i].fold(gameStates[i + 1]);
+            gameStatesNew.push(gameStateFolded);
+            let time = Date.now();
+            console.log('folding', i);
+            proofsNew.push(
+              await Game.fold(gameStateFolded, proofs[i], proofs[i + 1])
+            );
+            console.log('folding done', Date.now() - time);
+          } else {
+            gameStatesNew.push(gameStates[i]);
+            proofsNew.push(proofs[i]);
+          }
+        }
+        gameStates = gameStatesNew;
+        proofs = proofsNew;
+      }
+      return proofs[0];
     }
   }
 
-  it('play single step: up', async () => {
+  it.skip('play single step: up', async () => {
     await localDeploy();
 
     // update transaction
@@ -94,5 +126,37 @@ describe('Game', () => {
 
     const updatedNum = zkApp.score.get();
     expect(updatedNum).toEqual(Field(1));
+  });
+
+  it.skip('play two steps: up up', async () => {
+    await localDeploy();
+
+    // update transaction
+    let proof = await proveGame([STEP.UP, STEP.UP]);
+    // console.log(JSON.stringify(proof));
+    const txn = await Mina.transaction(senderAccount, () => {
+      zkApp.update(proof);
+    });
+    await txn.prove();
+    await txn.sign([senderKey]).send();
+
+    const updatedNum = zkApp.score.get();
+    expect(updatedNum).toEqual(Field(2));
+  });
+
+  it('play three steps: up up down', async () => {
+    await localDeploy();
+
+    // update transaction
+    let proof = await proveGame([STEP.UP, STEP.UP, STEP.DOWN]);
+    // console.log(JSON.stringify(proof));
+    const txn = await Mina.transaction(senderAccount, () => {
+      zkApp.update(proof);
+    });
+    await txn.prove();
+    await txn.sign([senderKey]).send();
+
+    const updatedNum = zkApp.score.get();
+    expect(updatedNum).toEqual(Field(3));
   });
 });

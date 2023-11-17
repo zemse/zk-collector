@@ -1,4 +1,4 @@
-import { Field, Struct, ZkProgram } from 'o1js';
+import { Field, SelfProof, Struct, ZkProgram } from 'o1js';
 
 export const STEP = {
   UP: 1n,
@@ -70,6 +70,20 @@ export class GameState extends Struct({
         throw new Error('invalid opcode');
     }
   }
+
+  fold(nextGameState: GameState) {
+    return new GameState({
+      score: new FieldPrevNext({
+        prev: this.score.prev,
+        next: nextGameState.score.next,
+      }),
+      location: new FieldPrevNext({
+        prev: this.location.prev,
+        next: nextGameState.location.next,
+      }),
+      moves: nextGameState.moves,
+    });
+  }
 }
 
 let N = 50;
@@ -112,6 +126,40 @@ export const Game = ZkProgram({
             publicInput.location.next.equals(publicInput.location.prev.add(N))
           ) // TODO prevent overflow
           .assertTrue();
+      },
+    },
+    fold: {
+      privateInputs: [SelfProof, SelfProof],
+
+      method(
+        newState: GameState,
+        earlierProof1: SelfProof<GameState, void>,
+        earlierProof2: SelfProof<GameState, void>
+      ) {
+        // ensure zk proofs verify
+        earlierProof1.verify();
+        earlierProof2.verify();
+
+        // ensure continuity
+        earlierProof1.publicInput.location.next.assertEquals(
+          earlierProof2.publicInput.location.prev
+        );
+        earlierProof1.publicInput.score.next.assertEquals(
+          earlierProof2.publicInput.score.prev
+        );
+        earlierProof1.publicInput.moves
+          .add(1)
+          .assertEquals(earlierProof2.publicInput.moves);
+
+        // constrain folded proof
+        newState.location.prev.assertEquals(
+          earlierProof1.publicInput.location.prev
+        );
+        newState.location.next.assertEquals(
+          earlierProof2.publicInput.location.next
+        );
+        newState.score.prev.assertEquals(earlierProof1.publicInput.score.prev);
+        newState.score.next.assertEquals(earlierProof2.publicInput.score.next);
       },
     },
   },
