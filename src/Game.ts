@@ -1,5 +1,6 @@
 import {
   Field,
+  PublicKey,
   SelfProof,
   SmartContract,
   State,
@@ -231,7 +232,16 @@ export const Game = ZkProgram({
 export let GameProof_ = ZkProgram.Proof(Game);
 export class GameProof extends GameProof_ {}
 
+export class SubmitScoreEvent extends Struct({
+  player: PublicKey,
+  score: Field,
+}) {}
+
 export class GameLeaderboard extends SmartContract {
+  events = {
+    'submit-score': SubmitScoreEvent,
+  };
+
   @state(Field) highScore = State<Field>();
 
   @method submitScore(proof: GameProof) {
@@ -244,7 +254,12 @@ export class GameLeaderboard extends SmartContract {
 
     // make the score public
     this.highScore.set(proof.publicInput.score.next);
-
-    // TODO emit an event too
+    this.emitEvent(
+      'submit-score',
+      new SubmitScoreEvent({
+        player: this.sender,
+        score: proof.publicInput.score.next,
+      })
+    );
   }
 }
