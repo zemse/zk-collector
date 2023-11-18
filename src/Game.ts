@@ -1,4 +1,13 @@
-import { Field, SelfProof, Struct, ZkProgram } from 'o1js';
+import {
+  Field,
+  SelfProof,
+  SmartContract,
+  State,
+  Struct,
+  ZkProgram,
+  method,
+  state,
+} from 'o1js';
 import { MerkleTreeWrapper } from './merkle-tree';
 
 export const N = 50;
@@ -218,3 +227,24 @@ export const Game = ZkProgram({
     },
   },
 });
+
+export let GameProof_ = ZkProgram.Proof(Game);
+export class GameProof extends GameProof_ {}
+
+export class GameLeaderboard extends SmartContract {
+  @state(Field) highScore = State<Field>();
+
+  @method submitScore(proof: GameProof) {
+    // ensure valid zk proof of solution
+    proof.verify();
+
+    // ensure start states are initial
+    proof.publicInput.score.prev.assertEquals(0);
+    proof.publicInput.location.prev.assertEquals(0);
+
+    // make the score public
+    this.highScore.set(proof.publicInput.score.next);
+
+    // TODO emit an event too
+  }
+}

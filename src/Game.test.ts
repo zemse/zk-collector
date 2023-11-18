@@ -1,37 +1,7 @@
-import { Game, GameState, STEP } from './Game';
-import {
-  Field,
-  Mina,
-  PrivateKey,
-  PublicKey,
-  AccountUpdate,
-  SmartContract,
-  state,
-  State,
-  method,
-  ZkProgram,
-} from 'o1js';
+import { Game, GameProof, GameLeaderboard, GameState, STEP } from './Game';
+import { Field, Mina, PrivateKey, PublicKey, AccountUpdate } from 'o1js';
 
 let proofsEnabled = false;
-
-export let GameProof_ = ZkProgram.Proof(Game);
-export class GameProof extends GameProof_ {}
-
-class GameTest extends SmartContract {
-  @state(Field) score = State<Field>();
-
-  @method update(proof: GameProof) {
-    // ensure valid zk proof of solution
-    proof.verify();
-
-    // ensure start states are initial
-    proof.publicInput.score.prev.assertEquals(0);
-    proof.publicInput.location.prev.assertEquals(0);
-
-    // make the score public
-    this.score.set(proof.publicInput.score.next);
-  }
-}
 
 describe('Game', () => {
   let deployerAccount: PublicKey,
@@ -40,11 +10,11 @@ describe('Game', () => {
     senderKey: PrivateKey,
     zkAppAddress: PublicKey,
     zkAppPrivateKey: PrivateKey,
-    zkApp: GameTest;
+    zkApp: GameLeaderboard;
 
   beforeAll(async () => {
     await Game.compile();
-    if (proofsEnabled) await GameTest.compile();
+    if (proofsEnabled) await GameLeaderboard.compile();
   });
 
   beforeEach(() => {
@@ -56,7 +26,7 @@ describe('Game', () => {
       Local.testAccounts[1]);
     zkAppPrivateKey = PrivateKey.random();
     zkAppAddress = zkAppPrivateKey.toPublicKey();
-    zkApp = new GameTest(zkAppAddress);
+    zkApp = new GameLeaderboard(zkAppAddress);
   });
 
   async function localDeploy() {
@@ -120,12 +90,12 @@ describe('Game', () => {
     let proof = await proveGame([STEP.RIGHT], [[1n, Field(20)]]);
     // console.log(JSON.stringify(proof));
     const txn = await Mina.transaction(senderAccount, () => {
-      zkApp.update(proof);
+      zkApp.submitScore(proof);
     });
     await txn.prove();
     await txn.sign([senderKey]).send();
 
-    const updatedNum = zkApp.score.get();
+    const updatedNum = zkApp.highScore.get();
     expectEqual(updatedNum, Field(20));
   });
 
@@ -143,12 +113,12 @@ describe('Game', () => {
     );
     // console.log(JSON.stringify(proof));
     const txn = await Mina.transaction(senderAccount, () => {
-      zkApp.update(proof);
+      zkApp.submitScore(proof);
     });
     await txn.prove();
     await txn.sign([senderKey]).send();
 
-    const updatedNum = zkApp.score.get();
+    const updatedNum = zkApp.highScore.get();
     expectEqual(updatedNum, Field(35));
   });
 
@@ -166,12 +136,12 @@ describe('Game', () => {
     );
     // console.log(JSON.stringify(proof));
     const txn = await Mina.transaction(senderAccount, () => {
-      zkApp.update(proof);
+      zkApp.submitScore(proof);
     });
     await txn.prove();
     await txn.sign([senderKey]).send();
 
-    const updatedNum = zkApp.score.get();
+    const updatedNum = zkApp.highScore.get();
     expectEqual(updatedNum, Field(35));
   });
 });
