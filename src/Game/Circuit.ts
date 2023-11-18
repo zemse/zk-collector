@@ -22,34 +22,41 @@ export const GameCircuit = ZkProgram({
       privateInputs: [Field], // opcode
 
       method(publicInput: GameState, opcode: Field) {
+        // location transition
         opcode
           .equals(Field(STEP.UP))
           .not()
           .or(
             publicInput.location.next.equals(publicInput.location.prev.sub(N))
-          ) // TODO prevent overflow
+          )
           .assertTrue();
         opcode
           .equals(Field(STEP.LEFT))
           .not()
           .or(
             publicInput.location.next.equals(publicInput.location.prev.sub(1))
-          ) // TODO prevent overflow
+          )
           .assertTrue();
         opcode
           .equals(Field(STEP.RIGHT))
           .not()
           .or(
             publicInput.location.next.equals(publicInput.location.prev.add(1))
-          ) // TODO prevent overflow
+          )
           .assertTrue();
         opcode
           .equals(Field(STEP.DOWN))
           .not()
           .or(
             publicInput.location.next.equals(publicInput.location.prev.add(N))
-          ) // TODO prevent overflow
+          )
           .assertTrue();
+
+        // 2D grid boundary
+        publicInput.location.prev.assertGreaterThanOrEqual(0);
+        publicInput.location.next.assertGreaterThanOrEqual(0);
+        publicInput.location.prev.assertLessThan(N * N);
+        publicInput.location.next.assertLessThan(N * N);
       },
     },
     fold: {
