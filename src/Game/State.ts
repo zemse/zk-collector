@@ -63,7 +63,7 @@ export class GameState extends Struct({
         claimedRoot: FieldPrevNext.from(claimedTree.build().getRoot()),
         score: FieldPrevNext.default(),
         location: FieldPrevNext.default(),
-        moves: Field(0),
+        moves: Field(1),
       },
       scoresTree.clone(),
       claimedTree.clone()
@@ -108,7 +108,7 @@ export class GameState extends Struct({
         ),
         score: this.score.update((s) => s.add(newScore)),
         location,
-        moves: this.moves.add(1),
+        moves: Field(1),
       },
       scoresTree,
       claimedTree
@@ -128,7 +128,7 @@ export class GameState extends Struct({
           prev: this.location.prev,
           next: nextGameState.location.next,
         }),
-        moves: nextGameState.moves,
+        moves: this.moves.add(nextGameState.moves),
       },
       this.scoresTree.clone(),
       this.claimedTree.clone()

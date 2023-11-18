@@ -83,6 +83,9 @@ export const GameCircuit = ZkProgram({
           .and(publicInput.score.prev.add(score).equals(publicInput.score.next))
           .or(publicInput.score.prev.equals(publicInput.score.next))
           .assertTrue();
+
+        // moves should be 1 for base proof
+        publicInput.moves.assertEquals(Field(1));
       },
     },
     fold: {
@@ -104,9 +107,6 @@ export const GameCircuit = ZkProgram({
         earlierProof1.publicInput.score.next.assertEquals(
           earlierProof2.publicInput.score.prev
         );
-        earlierProof1.publicInput.moves
-          .add(1)
-          .assertEquals(earlierProof2.publicInput.moves);
 
         // constrain folded proof
         newState.location.prev.assertEquals(
@@ -117,6 +117,9 @@ export const GameCircuit = ZkProgram({
         );
         newState.score.prev.assertEquals(earlierProof1.publicInput.score.prev);
         newState.score.next.assertEquals(earlierProof2.publicInput.score.next);
+        newState.moves.assertEquals(
+          earlierProof1.publicInput.moves.add(earlierProof2.publicInput.moves)
+        );
       },
     },
   },

@@ -4,7 +4,7 @@ import { GameCircuit, GameProof } from './Game/Circuit';
 import { GameLeaderboard } from './Game/Contract';
 import { GameState } from './Game/State';
 
-import { LEFT, RIGHT } from './Game/constants';
+import { DOWN, LEFT, RIGHT, UP } from './Game/constants';
 import { proveGame } from './Game/prover';
 
 let proofsEnabled = false;
@@ -106,6 +106,30 @@ describe('Game', () => {
 
     const updatedNum = zkApp.highScore.get();
     expectEqual(updatedNum, Field(35));
+  });
+
+  it.only('play multiple steps: right down right left up - does not count revisited cells', async () => {
+    await localDeploy();
+
+    // update transaction
+    let proof = await proveGame(
+      [RIGHT, DOWN, RIGHT, LEFT, UP, RIGHT, LEFT],
+      [
+        [1n, Field(20)],
+        [2n, Field(15)],
+        [3n, Field(5)],
+        [51n, Field(5)],
+      ]
+    );
+    // console.log(JSON.stringify(proof));
+    const txn = await Mina.transaction(senderAccount, () => {
+      zkApp.submitScore(proof);
+    });
+    await txn.prove();
+    await txn.sign([senderKey]).send();
+
+    const updatedNum = zkApp.highScore.get();
+    expectEqual(updatedNum, Field(40));
   });
 });
 
