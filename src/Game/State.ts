@@ -104,7 +104,7 @@ export class GameState extends Struct({
       {
         scoresRoot: this.scoresRoot,
         claimedRoot: this.claimedRoot.update(() =>
-          this.claimedTree.build().getRoot()
+          claimedTree.build().getRoot()
         ),
         score: this.score.update((s) => s.add(newScore)),
         location,
