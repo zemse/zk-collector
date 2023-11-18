@@ -1,6 +1,6 @@
 import { Struct, Field } from 'o1js';
-import { N, STEP } from './constants';
-import { MerkleTreeWrapper } from '../merkle-tree';
+import { N, STEP } from './constants.js';
+import { MerkleTreeWrapper } from '../merkle-tree.js';
 
 class FieldPrevNext extends Struct({
   prev: Field,

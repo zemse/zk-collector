@@ -7,7 +7,7 @@ import {
   State,
   method,
 } from 'o1js';
-import { GameProof } from './Circuit';
+import { GameProof } from './Circuit.js';
 
 export class SubmitScoreEvent extends Struct({
   player: PublicKey,

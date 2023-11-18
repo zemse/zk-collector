@@ -9,9 +9,9 @@ import {
   method,
   state,
 } from 'o1js';
-import { MerkleTreeWrapper } from '../merkle-tree';
-import { N, STEP } from './constants';
-import { GameState } from './State';
+import { MerkleTreeWrapper } from '../merkle-tree.js';
+import { N, STEP } from './constants.js';
+import { GameState } from './State.js';
 
 export const GameCircuit = ZkProgram({
   name: 'game',

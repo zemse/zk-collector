@@ -20,16 +20,19 @@
     "format": "prettier --write --ignore-unknown **/*",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "testw": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "lint": "npx eslint src/* --fix"
+    "lint": "npx eslint src/* --fix",
+    "serve": "npm run build && node build/src/local-mina.js"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.16.4",
     "@babel/preset-typescript": "^7.16.0",
+    "@types/express": "^4.17.21",
     "@types/jest": "^27.0.3",
     "@typescript-eslint/eslint-plugin": "^5.5.0",
     "@typescript-eslint/parser": "^5.5.0",
     "eslint": "^8.7.0",
     "eslint-plugin-o1js": "^0.4.0",
+    "express": "^4.18.2",
     "jest": "^27.3.1",
     "prettier": "^2.3.2",
     "ts-jest": "^27.0.7",
