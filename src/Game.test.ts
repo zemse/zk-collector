@@ -1,5 +1,10 @@
-import { Game, GameProof, GameLeaderboard, GameState, STEP } from './Game';
 import { Field, Mina, PrivateKey, PublicKey, AccountUpdate } from 'o1js';
+
+import { GameCircuit, GameProof } from './Game/Circuit';
+import { GameLeaderboard } from './Game/Contract';
+import { GameState } from './Game/State';
+
+import { LEFT, RIGHT } from './Game/constants';
 
 let proofsEnabled = false;
 
@@ -13,7 +18,7 @@ describe('Game', () => {
     zkApp: GameLeaderboard;
 
   beforeAll(async () => {
-    await Game.compile();
+    await GameCircuit.compile();
     if (proofsEnabled) await GameLeaderboard.compile();
   });
 
@@ -41,7 +46,7 @@ describe('Game', () => {
 
   async function proveGame(runcodes: bigint[], scores?: [bigint, Field][]) {
     if (runcodes.length === 1) {
-      return Game.play(
+      return GameCircuit.play(
         GameState.initial(scores).operate(Field(runcodes[0])),
         Field(runcodes[0])
       );
@@ -54,7 +59,7 @@ describe('Game', () => {
         gameStates.push(gameState);
         let time = Date.now();
         console.log('proving');
-        proofs.push(await Game.play(gameState, Field(runcode)));
+        proofs.push(await GameCircuit.play(gameState, Field(runcode)));
         console.log('proving done', Date.now() - time);
       }
       while (proofs.length > 1) {
@@ -67,7 +72,7 @@ describe('Game', () => {
             let time = Date.now();
             console.log('folding', i);
             proofsNew.push(
-              await Game.fold(gameStateFolded, proofs[i], proofs[i + 1])
+              await GameCircuit.fold(gameStateFolded, proofs[i], proofs[i + 1])
             );
             console.log('folding done', Date.now() - time);
           } else {
@@ -87,7 +92,7 @@ describe('Game', () => {
     await localDeploy();
 
     // update transaction
-    let proof = await proveGame([STEP.RIGHT], [[1n, Field(20)]]);
+    let proof = await proveGame([RIGHT], [[1n, Field(20)]]);
     // console.log(JSON.stringify(proof));
     const txn = await Mina.transaction(senderAccount, () => {
       zkApp.submitScore(proof);
@@ -104,7 +109,7 @@ describe('Game', () => {
 
     // update transaction
     let proof = await proveGame(
-      [STEP.RIGHT, STEP.RIGHT],
+      [RIGHT, RIGHT],
       [
         [1n, Field(20)],
         [2n, Field(15)],
@@ -127,7 +132,7 @@ describe('Game', () => {
 
     // update transaction
     let proof = await proveGame(
-      [STEP.RIGHT, STEP.RIGHT, STEP.LEFT],
+      [RIGHT, RIGHT, LEFT],
       [
         [1n, Field(20)],
         [2n, Field(15)],
