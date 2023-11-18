@@ -69,14 +69,14 @@ describe('Game', () => {
     await txn.sign([deployerKey, zkAppPrivateKey]).send();
   }
 
-  async function proveGame(runcodes: bigint[]) {
+  async function proveGame(runcodes: bigint[], scores?: [bigint, Field][]) {
     if (runcodes.length === 1) {
       return Game.play(
-        GameState.initial().operate(Field(runcodes[0])),
+        GameState.initial(scores).operate(Field(runcodes[0])),
         Field(runcodes[0])
       );
     } else {
-      let gameState = GameState.initial();
+      let gameState = GameState.initial(scores);
       let gameStates: GameState[] = [];
       let proofs: GameProof[] = [];
       for (const runcode of runcodes) {
@@ -112,11 +112,12 @@ describe('Game', () => {
     }
   }
 
-  it.skip('play single step: up', async () => {
+  // TODO make it work for up as well (needs working out the map)
+  it('play single step: right', async () => {
     await localDeploy();
 
     // update transaction
-    let proof = await proveGame([STEP.UP]);
+    let proof = await proveGame([STEP.RIGHT], [[1n, Field(20)]]);
     // console.log(JSON.stringify(proof));
     const txn = await Mina.transaction(senderAccount, () => {
       zkApp.update(proof);
@@ -125,14 +126,21 @@ describe('Game', () => {
     await txn.sign([senderKey]).send();
 
     const updatedNum = zkApp.score.get();
-    expect(updatedNum).toEqual(Field(1));
+    expectEqual(updatedNum, Field(20));
   });
 
-  it.skip('play two steps: up up', async () => {
+  it('play two steps: right right', async () => {
     await localDeploy();
 
     // update transaction
-    let proof = await proveGame([STEP.UP, STEP.UP]);
+    let proof = await proveGame(
+      [STEP.RIGHT, STEP.RIGHT],
+      [
+        [1n, Field(20)],
+        [2n, Field(15)],
+        [3n, Field(5)],
+      ]
+    );
     // console.log(JSON.stringify(proof));
     const txn = await Mina.transaction(senderAccount, () => {
       zkApp.update(proof);
@@ -141,14 +149,21 @@ describe('Game', () => {
     await txn.sign([senderKey]).send();
 
     const updatedNum = zkApp.score.get();
-    expect(updatedNum).toEqual(Field(2));
+    expectEqual(updatedNum, Field(35));
   });
 
-  it('play three steps: up up down', async () => {
+  it('play three steps: right right left - does not count revisited cells', async () => {
     await localDeploy();
 
     // update transaction
-    let proof = await proveGame([STEP.UP, STEP.UP, STEP.DOWN]);
+    let proof = await proveGame(
+      [STEP.RIGHT, STEP.RIGHT, STEP.LEFT],
+      [
+        [1n, Field(20)],
+        [2n, Field(15)],
+        [3n, Field(5)],
+      ]
+    );
     // console.log(JSON.stringify(proof));
     const txn = await Mina.transaction(senderAccount, () => {
       zkApp.update(proof);
@@ -157,6 +172,17 @@ describe('Game', () => {
     await txn.sign([senderKey]).send();
 
     const updatedNum = zkApp.score.get();
-    expect(updatedNum).toEqual(Field(3));
+    expectEqual(updatedNum, Field(35));
   });
 });
+
+function expectEqual(a: Field, b: Field) {
+  try {
+    // doesnt throw helpful error Field when not equal
+    expect(a).toEqual(b);
+  } catch {
+    throw new Error(
+      `expected field ${a.toBigInt()} to equal field ${b.toBigInt()}`
+    );
+  }
+}
