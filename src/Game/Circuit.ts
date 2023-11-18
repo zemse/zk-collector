@@ -1,15 +1,5 @@
-import {
-  Field,
-  PublicKey,
-  SelfProof,
-  SmartContract,
-  State,
-  Struct,
-  ZkProgram,
-  method,
-  state,
-} from 'o1js';
-import { MerkleTreeWrapper } from '../merkle-tree.js';
+import { Field, SelfProof, ZkProgram } from 'o1js';
+import { MerkleWitnessDepth } from '../merkle-tree.js';
 import { N, STEP } from './constants.js';
 import { GameState } from './State.js';
 
@@ -19,9 +9,22 @@ export const GameCircuit = ZkProgram({
 
   methods: {
     play: {
-      privateInputs: [Field], // opcode
+      privateInputs: [
+        Field,
+        Field,
+        MerkleWitnessDepth,
+        Field,
+        MerkleWitnessDepth,
+      ],
 
-      method(publicInput: GameState, opcode: Field) {
+      method(
+        publicInput: GameState,
+        opcode: Field,
+        score: Field,
+        scoreBranch: MerkleWitnessDepth,
+        claimedBefore: Field,
+        claimedBranch: MerkleWitnessDepth
+      ) {
         // location transition
         opcode
           .equals(Field(STEP.UP))
@@ -57,6 +60,29 @@ export const GameCircuit = ZkProgram({
         publicInput.location.next.assertGreaterThanOrEqual(0);
         publicInput.location.prev.assertLessThan(N * N);
         publicInput.location.next.assertLessThan(N * N);
+
+        // constrain claimed
+        claimedBefore.assertBool();
+        const claimedRootBefore = claimedBranch.calculateRoot(claimedBefore);
+        // claimedRootBefore.assertEquals(
+        //   publicInput.claimedRoot.prev,
+        //   'claimedRootBefore'
+        // );
+        const claimedRootAfter = claimedBranch.calculateRoot(Field(1));
+        // claimedRootAfter.assertEquals(
+        //   publicInput.claimedRoot.next,
+        //   'claimedRootAfter'
+        // );
+
+        // constrain score
+        const scoresRoot = scoreBranch.calculateRoot(score);
+        scoresRoot.assertEquals(publicInput.scoresRoot);
+        // if claimedBefore == 0 { prev + score == next } else {prev == next }
+        claimedBefore
+          .equals(Field(0))
+          .and(publicInput.score.prev.add(score).equals(publicInput.score.next))
+          .or(publicInput.score.prev.equals(publicInput.score.next))
+          .assertTrue();
       },
     },
     fold: {

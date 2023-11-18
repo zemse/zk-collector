@@ -1,4 +1,7 @@
-import { Field, MerkleTree } from 'o1js';
+import { Field, MerkleTree, MerkleWitness } from 'o1js';
+import { DEPTH } from './Game/constants';
+
+export class MerkleWitnessDepth extends MerkleWitness(DEPTH) {}
 
 // just for the ability to clone a merkle tree
 export class MerkleTreeWrapper {
@@ -16,6 +19,12 @@ export class MerkleTreeWrapper {
 
   get(index: bigint): Field | undefined {
     return this.values[index.toString()];
+  }
+
+  getWitness(index: bigint): [Field, MerkleWitnessDepth] {
+    let value = this.get(index) ?? Field(0);
+    let scoreBranch = new MerkleWitnessDepth(this.build().getWitness(index));
+    return [value, scoreBranch];
   }
 
   build() {

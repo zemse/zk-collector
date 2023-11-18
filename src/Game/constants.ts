@@ -1,4 +1,5 @@
 export const N = 50;
+export const DEPTH = Math.ceil(Math.log2(N * N));
 
 export const UP = 1n;
 export const LEFT = 2n;

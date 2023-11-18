@@ -1,26 +1,68 @@
 import { Field } from 'o1js';
 import { GameCircuit, GameProof } from './Circuit.js';
 import { GameState } from './State.js';
+import { DEPTH } from './constants.js';
 
 export async function proveGame(
   runcodes: bigint[],
   scores?: [bigint, Field][]
 ) {
   if (runcodes.length === 1) {
+    let gameState = GameState.initial(scores);
+    let [claimed, claimedBranch] = gameState.claimedTree.getWitness(
+      gameState.location.next.toBigInt()
+    );
+    gameState = gameState.operate(Field(runcodes[0]));
+    let [score, scoreBranch] = gameState.scoresTree.getWitness(
+      gameState.location.next.toBigInt()
+    );
+    console.log({
+      score: score.toBigInt(),
+      scoreBranch,
+      claimed: claimed.toBigInt(),
+      claimedBranch,
+    });
     return GameCircuit.play(
-      GameState.initial(scores).operate(Field(runcodes[0])),
-      Field(runcodes[0])
+      gameState,
+      Field(runcodes[0]),
+      score,
+      scoreBranch,
+      claimed,
+      claimedBranch
     );
   } else {
     let gameState = GameState.initial(scores);
     let gameStates: GameState[] = [];
     let proofs: GameProof[] = [];
     for (const runcode of runcodes) {
+      let claimedTreePrev = gameState.claimedTree;
       gameState = gameState.operate(Field(runcode));
+      let [claimed, claimedBranch] = claimedTreePrev.getWitness(
+        gameState.location.next.toBigInt()
+      );
+      let [score, scoreBranch] = gameState.scoresTree.getWitness(
+        gameState.location.next.toBigInt()
+      );
+      console.log({
+        claimedTreePrev,
+        score: score.toBigInt(),
+        // scoreBranch,
+        claimed: claimed.toBigInt(),
+        // claimedBranch,
+      });
       gameStates.push(gameState);
       let time = Date.now();
       console.log('proving');
-      proofs.push(await GameCircuit.play(gameState, Field(runcode)));
+      proofs.push(
+        await GameCircuit.play(
+          gameState,
+          Field(runcode),
+          score,
+          scoreBranch,
+          claimed,
+          claimedBranch
+        )
+      );
       console.log('proving done', Date.now() - time);
     }
     while (proofs.length > 1) {

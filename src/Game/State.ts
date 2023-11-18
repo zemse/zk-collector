@@ -1,5 +1,5 @@
 import { Struct, Field } from 'o1js';
-import { N, STEP } from './constants.js';
+import { DEPTH, N, STEP } from './constants.js';
 import { MerkleTreeWrapper } from '../merkle-tree.js';
 
 class FieldPrevNext extends Struct({
@@ -50,8 +50,8 @@ export class GameState extends Struct({
   }
 
   static initial(scores?: [bigint, Field][]) {
-    const scoresTree = new MerkleTreeWrapper(Math.ceil(Math.log2(N * N)));
-    const claimedTree = new MerkleTreeWrapper(Math.ceil(Math.log2(N * N)));
+    const scoresTree = new MerkleTreeWrapper(DEPTH);
+    const claimedTree = new MerkleTreeWrapper(DEPTH);
 
     for (const score of scores ?? []) {
       scoresTree.set(score[0], score[1]);
@@ -89,16 +89,17 @@ export class GameState extends Struct({
       default:
         throw new Error('invalid opcode');
     }
+
+    let scoresTree = this.scoresTree.clone();
+    let claimedTree = this.claimedTree.clone();
+
     const isClaimed =
-      (
-        this.claimedTree.get(location.next.toBigInt()) ?? Field(0)
-      ).toBigInt() === 1n;
+      (claimedTree.get(location.next.toBigInt()) ?? Field(0)).toBigInt() === 1n;
     newScore =
-      (!isClaimed
-        ? this.scoresTree.get(location.next.toBigInt())
-        : undefined) ?? Field(0);
+      (!isClaimed ? scoresTree.get(location.next.toBigInt()) : undefined) ??
+      Field(0);
     // console.log('loc', location.next.toBigInt(), 'score', newScore.toBigInt());
-    this.claimedTree.set(location.next.toBigInt(), Field(1));
+    claimedTree.set(location.next.toBigInt(), Field(1));
     return new GameState(
       {
         scoresRoot: this.scoresRoot,
@@ -109,8 +110,8 @@ export class GameState extends Struct({
         location,
         moves: this.moves.add(1),
       },
-      this.scoresTree.clone(),
-      this.claimedTree.clone()
+      scoresTree,
+      claimedTree
     );
   }
 
