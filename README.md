@@ -1,6 +1,8 @@
 # zk collector
 
-This is a very simple zkVM that just implements 4 opcodes: UP, DOWN, LEFT, RIGHT. It is used for proving score without revealing collector gameplay.
+This is a very simple zkVM that just implements 4 opcodes: UP, DOWN, LEFT, RIGHT. It is used for proving the score without revealing collector gameplay.
+
+Eth global submission link: https://ethglobal.com/showcase/zkcollector-dzv9m
 
 ![Alt text](<Screenshot 2023-11-19 at 5.46.38 AM.png>)
 
