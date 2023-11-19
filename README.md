@@ -1,6 +1,6 @@
-# Mina zkApp: Istanbul Contracts
+# zk collector
 
-This template uses TypeScript.
+This is a very simple zkVM that just implements 4 opcodes: UP, DOWN, LEFT, RIGHT. It is used for proving score without revealing collector gameplay.
 
 ## How to build
 
