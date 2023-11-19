@@ -1,5 +1,5 @@
 import { Field, MerkleTree, MerkleWitness } from 'o1js';
-import { DEPTH } from './Game/constants';
+import { DEPTH } from './Game/constants.js';
 
 export class MerkleWitnessDepth extends MerkleWitness(DEPTH) {}
 
