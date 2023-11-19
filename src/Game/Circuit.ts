@@ -22,8 +22,8 @@ export const GameCircuit = ZkProgram({
         opcode: Field,
         score: Field,
         scoreBranch: MerkleWitnessDepth,
-        claimedBefore: Field,
-        claimedBranch: MerkleWitnessDepth
+        collectedBefore: Field,
+        collectedBranch: MerkleWitnessDepth
       ) {
         // location transition
         opcode
@@ -61,24 +61,25 @@ export const GameCircuit = ZkProgram({
         publicInput.location.prev.assertLessThan(N * N);
         publicInput.location.next.assertLessThan(N * N);
 
-        // constrain claimed
-        claimedBefore.assertBool();
-        const claimedRootBefore = claimedBranch.calculateRoot(claimedBefore);
-        // claimedRootBefore.assertEquals(
-        //   publicInput.claimedRoot.prev,
-        //   'claimedRootBefore'
+        // constrain collected
+        collectedBefore.assertBool();
+        const collectedRootBefore =
+          collectedBranch.calculateRoot(collectedBefore);
+        // collectedRootBefore.assertEquals(
+        //   publicInput.collectedRoot.prev,
+        //   'collectedRootBefore'
         // );
-        const claimedRootAfter = claimedBranch.calculateRoot(Field(1));
-        // claimedRootAfter.assertEquals(
-        //   publicInput.claimedRoot.next,
-        //   'claimedRootAfter'
+        const collectedRootAfter = collectedBranch.calculateRoot(Field(1));
+        // collectedRootAfter.assertEquals(
+        //   publicInput.collectedRoot.next,
+        //   'collectedRootAfter'
         // );
 
         // constrain score
         const scoresRoot = scoreBranch.calculateRoot(score);
         scoresRoot.assertEquals(publicInput.scoresRoot);
-        // if claimedBefore == 0 { prev + score == next } else {prev == next }
-        claimedBefore
+        // if collectedBefore == 0 { prev + score == next } else {prev == next }
+        collectedBefore
           .equals(Field(0))
           .and(publicInput.score.prev.add(score).equals(publicInput.score.next))
           .or(publicInput.score.prev.equals(publicInput.score.next))
@@ -88,7 +89,7 @@ export const GameCircuit = ZkProgram({
         publicInput.moves.assertEquals(Field(1));
       },
     },
-    fold: {
+    aggregate: {
       privateInputs: [SelfProof, SelfProof],
 
       method(
@@ -108,7 +109,7 @@ export const GameCircuit = ZkProgram({
           earlierProof2.publicInput.score.prev
         );
 
-        // constrain folded proof
+        // constrain aggregated proof
         newState.location.prev.assertEquals(
           earlierProof1.publicInput.location.prev
         );

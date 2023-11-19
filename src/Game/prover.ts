@@ -9,7 +9,7 @@ export async function proveGame(
 ) {
   if (runcodes.length === 1) {
     let gameState = GameState.initial(scores);
-    let [claimed, claimedBranch] = gameState.claimedTree.getWitness(
+    let [collected, collectedBranch] = gameState.collectedTree.getWitness(
       gameState.location.next.toBigInt()
     );
     gameState = gameState.operate(Field(runcodes[0]));
@@ -19,36 +19,36 @@ export async function proveGame(
     console.log({
       score: score.toBigInt(),
       scoreBranch,
-      claimed: claimed.toBigInt(),
-      claimedBranch,
+      collected: collected.toBigInt(),
+      collectedBranch,
     });
     return GameCircuit.play(
       gameState,
       Field(runcodes[0]),
       score,
       scoreBranch,
-      claimed,
-      claimedBranch
+      collected,
+      collectedBranch
     );
   } else {
     let gameState = GameState.initial(scores);
     let gameStates: GameState[] = [];
     let proofs: GameProof[] = [];
     for (const runcode of runcodes) {
-      let claimedTreePrev = gameState.claimedTree;
+      let collectedTreePrev = gameState.collectedTree;
       gameState = gameState.operate(Field(runcode));
-      let [claimed, claimedBranch] = claimedTreePrev.getWitness(
+      let [collected, collectedBranch] = collectedTreePrev.getWitness(
         gameState.location.next.toBigInt()
       );
       let [score, scoreBranch] = gameState.scoresTree.getWitness(
         gameState.location.next.toBigInt()
       );
       console.log({
-        claimedTreePrev,
+        collectedTreePrev,
         score: score.toBigInt(),
         // scoreBranch,
-        claimed: claimed.toBigInt(),
-        // claimedBranch,
+        collected: collected.toBigInt(),
+        // collectedBranch,
       });
       gameStates.push(gameState);
       let time = Date.now();
@@ -59,8 +59,8 @@ export async function proveGame(
           Field(runcode),
           score,
           scoreBranch,
-          claimed,
-          claimedBranch
+          collected,
+          collectedBranch
         )
       );
       console.log('proving done', Date.now() - time);
@@ -70,14 +70,18 @@ export async function proveGame(
       let proofsNew: GameProof[] = [];
       for (let i = 0; i < proofs.length; i += 2) {
         if (i + 1 < proofs.length) {
-          let gameStateFolded = gameStates[i].fold(gameStates[i + 1]);
-          gameStatesNew.push(gameStateFolded);
+          let gameStateAggregated = gameStates[i].aggregate(gameStates[i + 1]);
+          gameStatesNew.push(gameStateAggregated);
           let time = Date.now();
-          console.log('folding', i);
+          console.log('aggregating', i);
           proofsNew.push(
-            await GameCircuit.fold(gameStateFolded, proofs[i], proofs[i + 1])
+            await GameCircuit.aggregate(
+              gameStateAggregated,
+              proofs[i],
+              proofs[i + 1]
+            )
           );
-          console.log('folding done', Date.now() - time);
+          console.log('aggregating done', Date.now() - time);
         } else {
           gameStatesNew.push(gameStates[i]);
           proofsNew.push(proofs[i]);

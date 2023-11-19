@@ -30,28 +30,28 @@ class FieldPrevNext extends Struct({
 
 export class GameState extends Struct({
   scoresRoot: Field,
-  claimedRoot: FieldPrevNext,
+  collectedRoot: FieldPrevNext,
   score: FieldPrevNext,
   location: FieldPrevNext,
   moves: Field,
 }) {
   scoresTree: MerkleTreeWrapper;
-  claimedTree: MerkleTreeWrapper;
+  collectedTree: MerkleTreeWrapper;
 
   constructor(
     obj: any,
     scoresTree: MerkleTreeWrapper,
-    claimedTree: MerkleTreeWrapper
+    collectedTree: MerkleTreeWrapper
   ) {
     // console.log(obj.score.prev.toBigInt(), obj.score.next.toBigInt());
     super(obj);
     this.scoresTree = scoresTree;
-    this.claimedTree = claimedTree;
+    this.collectedTree = collectedTree;
   }
 
   static initial(scores?: [bigint, Field][]) {
     const scoresTree = new MerkleTreeWrapper(DEPTH);
-    const claimedTree = new MerkleTreeWrapper(DEPTH);
+    const collectedTree = new MerkleTreeWrapper(DEPTH);
 
     for (const score of scores ?? []) {
       scoresTree.set(score[0], score[1]);
@@ -60,13 +60,13 @@ export class GameState extends Struct({
     return new GameState(
       {
         scoresRoot: scoresTree.build().getRoot(),
-        claimedRoot: FieldPrevNext.from(claimedTree.build().getRoot()),
+        collectedRoot: FieldPrevNext.from(collectedTree.build().getRoot()),
         score: FieldPrevNext.default(),
         location: FieldPrevNext.default(),
         moves: Field(1),
       },
       scoresTree.clone(),
-      claimedTree.clone()
+      collectedTree.clone()
     );
   }
 
@@ -91,35 +91,36 @@ export class GameState extends Struct({
     }
 
     let scoresTree = this.scoresTree.clone();
-    let claimedTree = this.claimedTree.clone();
+    let collectedTree = this.collectedTree.clone();
 
-    const isClaimed =
-      (claimedTree.get(location.next.toBigInt()) ?? Field(0)).toBigInt() === 1n;
+    const iscollected =
+      (collectedTree.get(location.next.toBigInt()) ?? Field(0)).toBigInt() ===
+      1n;
     newScore =
-      (!isClaimed ? scoresTree.get(location.next.toBigInt()) : undefined) ??
+      (!iscollected ? scoresTree.get(location.next.toBigInt()) : undefined) ??
       Field(0);
     // console.log('loc', location.next.toBigInt(), 'score', newScore.toBigInt());
-    claimedTree.set(location.next.toBigInt(), Field(1));
+    collectedTree.set(location.next.toBigInt(), Field(1));
     return new GameState(
       {
         scoresRoot: this.scoresRoot,
-        claimedRoot: this.claimedRoot.update(() =>
-          claimedTree.build().getRoot()
+        collectedRoot: this.collectedRoot.update(() =>
+          collectedTree.build().getRoot()
         ),
         score: this.score.update((s) => s.add(newScore)),
         location,
         moves: Field(1),
       },
       scoresTree,
-      claimedTree
+      collectedTree
     );
   }
 
-  fold(nextGameState: GameState) {
+  aggregate(nextGameState: GameState) {
     return new GameState(
       {
         scoresRoot: this.scoresRoot,
-        claimedRoot: this.claimedRoot,
+        collectedRoot: this.collectedRoot,
         score: new FieldPrevNext({
           prev: this.score.prev,
           next: nextGameState.score.next,
@@ -131,7 +132,7 @@ export class GameState extends Struct({
         moves: this.moves.add(nextGameState.moves),
       },
       this.scoresTree.clone(),
-      this.claimedTree.clone()
+      this.collectedTree.clone()
     );
   }
 }

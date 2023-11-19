@@ -108,7 +108,7 @@ describe('Game', () => {
     expectEqual(updatedNum, Field(35));
   });
 
-  it.only('play multiple steps: right down right left up - does not count revisited cells', async () => {
+  it('play multiple steps: right down right left up - does not count revisited cells', async () => {
     await localDeploy();
 
     // update transaction
